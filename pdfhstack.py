@@ -1,6 +1,12 @@
+"""
+Module for merging pages of pdf documents horizontally, a-la numpy.hstack
+
+You can use this script directly, but install pypdf first
+"""
 import argparse
-from pathlib import Path
+import sys
 from io import BytesIO
+from pathlib import Path
 from typing import IO
 
 try:
@@ -8,17 +14,16 @@ try:
 except ImportError as e:
     if __name__ == "__main__":
         print("pdfhstack requires pypdf to work. Install it first")
-        exit(1)
+        sys.exit(1)
     else:
         raise e
 
 
 def hstack(files: [str | IO | Path]) -> BytesIO:
+    """Make all work. Takes all pages from files and merge them. Returns BytesIO object with resulting pdf file"""
     pages = []
-    for f in files:
-        pages += PdfReader(f).pages
-
-    pages.sort(key=lambda page: page.cropbox.height)
+    for pdf in files:
+        pages += PdfReader(pdf).pages
 
     width = sum(page.cropbox.width for page in pages)
     height = max(page.cropbox.height for page in pages)
@@ -27,9 +32,7 @@ def hstack(files: [str | IO | Path]) -> BytesIO:
 
     current_x = 0
     for page in pages:
-        out.merge_translated_page(
-            page, tx=current_x, ty=out.cropbox.height - page.cropbox.height
-        )
+        out.merge_translated_page(page, tx=current_x, ty=out.cropbox.height - page.cropbox.height)
         current_x += page.cropbox.width
 
     writer = PdfWriter()
@@ -40,10 +43,9 @@ def hstack(files: [str | IO | Path]) -> BytesIO:
     return output
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="pdfhstack", description="Merge pages of pdf documents horizontally"
-    )
+def main():
+    """Literally main"""
+    parser = argparse.ArgumentParser(prog="pdfhstack", description="Merge pages of pdf documents horizontally")
     parser.add_argument("files", nargs="+", type=Path, help="files to merge")
     parser.add_argument(
         "-o",
@@ -56,3 +58,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     args.output.write_bytes(hstack(args.files).getbuffer())
+
+
+if __name__ == "__main__":
+    main()
